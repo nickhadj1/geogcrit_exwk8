@@ -1,0 +1,531 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Capitol Hill Story Walk</title>
+    <meta name="description" content="A story map walking tour of Seattle's Capitol Hill using MapLibre GL JS.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- MapLibre GL JS CSS -->
+    <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
+
+    <style>
+        /* Basic reset */
+        body { margin: 0; padding: 0; font-family: sans-serif; background-color: #f4f4f4; }
+
+        /* Layout using Flexbox */
+        body {
+            display: flex;
+            height: 100vh; /* Make body take full viewport height */
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        #sidebar {
+            width: 400px; /* Fixed width for sidebar. Adjust as needed. */
+            flex-shrink: 0; /* Prevent sidebar from shrinking */
+            height: 100vh; /* Full viewport height */
+            overflow-y: auto; /* Make it scrollable */
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #fff;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            z-index: 1; /* Ensure sidebar is above map controls if any */
+            position: relative; /* Needed for IntersectionObserver rootMargin percentages to work reliably */
+            scroll-behavior: smooth; /* Optional: Smooth scrolling within sidebar */
+            color: #333; /* Default text color */
+        }
+
+        #map {
+            flex-grow: 1; /* Map takes remaining width */
+            height: 100vh; /* Full viewport height */
+        }
+
+        /* Custom Scrollbar styling (optional, for aesthetics) */
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Story section styling */
+        .story-section {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer; /* Indicate clickable */
+            opacity: 0.8; /* Dim inactive sections slightly */
+            transition: opacity 0.3s ease, background-color 0.3s ease, border-left-color 0.3s ease, padding-left 0.3s ease; /* Smooth transitions */
+        }
+
+        .story-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .story-section h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .story-section img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            display: block; /* Prevent extra space below image */
+        }
+
+        .story-section p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .story-section p:last-child {
+             margin-bottom: 0;
+        }
+
+        .story-section strong {
+            color: #333;
+        }
+
+        /* Active section styling */
+        .story-section.active {
+            background-color: #e9f5ff; /* Light blue background */
+            border-left: 5px solid #007bff; /* Blue left border */
+            padding-left: 15px; /* Adjust padding due to border */
+            opacity: 1; /* Full opacity for active section */
+        }
+
+        .story-section.active h2,
+        .story-section.active p,
+        .story-section.active strong {
+            color: #003366; /* Darker text color */
+        }
+
+        /* Map marker styling */
+        .map-marker {
+            background-color: #007bff; /* Primary blue */
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.9em;
+            border: 2px solid #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+         .map-marker:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+            transform: scale(1.1); /* Slightly enlarge on hover */
+         }
+         /* Active marker styling */
+          .map-marker.active {
+            background-color: #28a745; /* Green color for active */
+            border-color: #fff;
+            transform: scale(1.2); /* Larger scale for active */
+         }
+
+         /* Basic Responsive Adjustment (optional) */
+         @media (max-width: 768px) {
+             body { flex-direction: column; } /* Stack sidebar and map */
+             #sidebar { width: 100%; height: 50vh; } /* Adjust heights */
+             #map { width: 100%; height: 50vh; }
+             /* Adjust scroll spy rootMargin if needed for stacked layout */
+         }
+
+
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Capitol Hill Story Walk</h1>
+        <p>Follow this walk through Seattle's Capitol Hill to explore key landmarks and their significance.</p>
+        <div id="story-sections-container">
+            <!-- Story sections will be loaded here by JS -->
+            <p>Loading story data...</p> <!-- Loading indicator -->
+        </div>
+    </div>
+    <div id="map"></div>
+
+    <!-- MapLibre GL JS Script -->
+    <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
+
+    <script>
+        // --- Configuration ---
+        // Using osm-liberty style which is based on OpenStreetMap vector tiles and doesn't require an API key.
+        // Source: https://maputnik.github.io/osm-liberty/style.json
+        // Requires attribution to OpenStreetMap contributors.
+        const mapStyleUrl = 'https://maputnik.github.io/osm-liberty/style.json';
+        const geoJsonFile = 'capitol_hill.geojson';
+        const initialCenter = [-122.319, 47.629]; // Roughly center of Capitol Hill, Seattle
+        const initialZoom = 14; // Initial zoom level
+        const flyToZoom = 16; // Zoom level when flying to a feature
+        // scrollSpyRootMargin: Defines the trigger area within the sidebar viewport for IntersectionObserver.
+        // Format: 'top right bottom left'. Negative values shrink the area inwards.
+        // '-10% 0px -80% 0px' means the trigger zone is between 10% and 80% down from the top of the sidebar viewport.
+        // An element's top entering this zone is detected. Adjust these values based on desired trigger point.
+        const scrollSpyRootMargin = '-10% 0px -80% 0px';
+
+
+        // --- Map Initialization ---
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: mapStyleUrl,
+            center: initialCenter,
+            zoom: initialZoom,
+            attributionControl: false // Hide default attribution - we'll add a custom one
+        });
+
+         // Add a custom attribution control for OpenStreetMap and MapLibre
+         map.addControl(new maplibregl.AttributionControl({
+             compact: true, // Use compact style on small screens
+             customAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | <a href="https://maplibre.org/">MapLibre GL JS</a>'
+         }));
+
+        // Add navigation control (zoom/pan buttons) to the top-right corner
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+
+        // --- Data and Elements ---
+        const sidebar = document.getElementById('sidebar');
+        const sectionsContainer = document.getElementById('story-sections-container');
+        let storyFeatures = []; // To store fetched features
+        const mapMarkers = new Map(); // Map to store MapLibre markers by place_id for easy access
+
+
+        // --- Functions ---
+
+        // Fly map to a feature's coordinates
+        function flyToFeature(feature, triggeredBy = 'click') {
+            // Use map.flyTo for smooth animation
+             map.flyTo({
+                 center: feature.geometry.coordinates,
+                 zoom: flyToZoom,
+                 duration: 1500, // Animation duration in ms
+                 essential: true // This animation is considered essential
+             });
+
+             // Update active states for sidebar and marker
+             updateActiveState(feature.properties.place_id, triggeredBy);
+         }
+
+         // Update active class for sidebar section and map marker
+         function updateActiveState(placeId, triggeredBy) {
+             // Remove active class from all sections and markers first
+             document.querySelectorAll('.story-section').forEach(sec => sec.classList.remove('active'));
+             mapMarkers.forEach(marker => marker.getElement().classList.remove('active'));
+
+             // Add active class to the target section and marker
+             const targetSection = document.querySelector(`.story-section[data-place-id="${placeId}"]`);
+             const targetMarker = mapMarkers.get(placeId);
+
+             if (targetSection) {
+                 targetSection.classList.add('active');
+                 // Only scroll sidebar into view if triggered by map interaction (e.g., marker click),
+                 // not when triggered by scrolling the sidebar itself (to avoid fighting the user's scroll).
+                 if (triggeredBy === 'click' && sidebar) {
+                     // Use block: 'center' to center the section in the view if possible
+                    targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 }
+             }
+             if (targetMarker) {
+                 targetMarker.getElement().classList.add('active');
+             }
+
+             // Update the state variable used by the scroll spy
+             activePlaceId = placeId;
+         }
+
+
+        // Render sidebar sections from features
+        function renderStorySections() {
+            if (!sectionsContainer) return; // Exit if container not found
+
+            sectionsContainer.innerHTML = ''; // Clear existing content
+
+            if (storyFeatures.length === 0) {
+                 sectionsContainer.innerHTML = '<p>No story features found in the data.</p>';
+                 return;
+            }
+
+            storyFeatures.forEach(feature => {
+                const props = feature.properties;
+                const section = document.createElement('div');
+                section.classList.add('story-section');
+                // Use data attributes to store linking information
+                section.dataset.placeId = props.place_id;
+                section.dataset.coords = JSON.stringify(feature.geometry.coordinates); // Store coordinates for easy access
+
+                // Generate placeholder image URL using a service like placeholder.com
+                // Includes the place_id and name for clarity in the placeholder image text.
+                const imageUrl = `https://via.placeholder.com/600x400?text=Place+${props.place_id}:+${encodeURIComponent(props.name || 'Untitled Place')}`;
+                // Alternative using Unsplash Source (less predictable results, but real images):
+                // const imageUrl = `https://source.unsplash.com/random/600x400/?seattle,capitol+hill,${encodeURIComponent((props.name || 'landmark').split(' ')[0])}`;
+
+
+                section.innerHTML = `
+                    <img src="${imageUrl}" alt="Image for ${props.name || 'Untitled Place'}">
+                    <h2>${props.place_id}. ${props.name || 'Untitled Place'}</h2>
+                    <p><strong>Location:</strong> ${props.location_description || 'No description provided.'}</p>
+                    <p><strong>Sense of Place (${props.sense_of_place_type || 'N/A'}):</strong> ${props.sense_explanation || 'No explanation provided.'}</p>
+                    <p><strong>Rhetorical Usage:</strong> ${props.rhetorical_usage || 'No usage provided.'}</p>
+                `;
+
+                // Add click listener to the sidebar section element
+                section.addEventListener('click', () => {
+                    // Find the feature associated with this section using the stored place_id
+                    const feature = storyFeatures.find(f => f.properties.place_id == section.dataset.placeId);
+                    if (feature) {
+                        flyToFeature(feature, 'click'); // Trigger flyTo and pass 'click' source
+                    }
+                });
+
+                sectionsContainer.appendChild(section);
+            });
+        }
+
+        // Add markers to the map from features
+        function addMarkers() {
+             // Clear existing markers if any (useful if data reloads or features change)
+             mapMarkers.forEach(marker => marker.remove());
+             mapMarkers.clear();
+
+            storyFeatures.forEach(feature => {
+                const el = document.createElement('div');
+                el.className = 'map-marker';
+                el.textContent = feature.properties.place_id; // Use place_id for the marker number
+
+                // Create the MapLibre marker instance
+                const marker = new maplibregl.Marker({
+                    element: el, // Use the custom HTML element
+                    anchor: 'bottom' // Anchor the bottom-center of the element to the coordinates
+                })
+                .setLngLat(feature.geometry.coordinates) // Set the marker position [longitude, latitude]
+                .addTo(map); // Add the marker to the map
+
+                // Store marker instance by place_id for easy lookup later
+                mapMarkers.set(feature.properties.place_id, marker);
+
+                // Add click listener to the marker's HTML element
+                el.addEventListener('click', () => {
+                     // Find the feature associated with this marker using the textContent (which is the place_id)
+                    const markerPlaceId = parseInt(el.textContent, 10); // Ensure it's a number
+                    const feature = storyFeatures.find(f => f.properties.place_id === markerPlaceId);
+                    if (feature) {
+                        flyToFeature(feature, 'click'); // Trigger flyTo and pass 'click' source
+                    }
+                });
+            });
+        }
+
+        // --- Scroll Spy Implementation ---
+        // Uses IntersectionObserver to detect which sidebar section is currently most visible
+        // within a defined area, and updates the map/active state accordingly.
+        let observer;
+        let activePlaceId = null; // Keep track of the place_id of the currently active section detected by scroll
+
+        function setupScrollSpy() {
+             // Only set up observer if there are story sections and the sidebar element exists
+             if (storyFeatures.length === 0 || !sidebar) return;
+
+             // Options for the IntersectionObserver
+             const options = {
+                 root: sidebar, // The scrollable element (#sidebar) is the root
+                 rootMargin: scrollSpyRootMargin, // Define the trigger area within the root
+                 threshold: 0 // Trigger as soon as any part of the element enters the rootMargin area
+             };
+
+             // Create a new observer instance
+             observer = new IntersectionObserver((entries) => {
+                 let topMostIntersectingEntry = null;
+                 let minTop = Infinity; // To find the element closest to the top of the sidebar that's intersecting
+
+                 // Iterate through all observed entries to find the one that is intersecting
+                 // the rootMargin area and is closest to the top of the sidebar.
+                 entries.forEach(entry => {
+                     if (entry.isIntersecting) {
+                          const section = entry.target;
+                          const rect = section.getBoundingClientRect();
+                           const sidebarRect = sidebar.getBoundingClientRect();
+
+                           // Calculate the position of the section's top edge relative to the sidebar's top edge.
+                           // We are interested in sections whose top is inside or above the sidebar's visible area (relativeTop >= 0)
+                           // and is the smallest positive value (closest to the top).
+                           const relativeTop = rect.top - sidebarRect.top;
+
+                           if (relativeTop >= 0 && relativeTop < minTop) {
+                                 minTop = relativeTop;
+                                 topMostIntersectingEntry = entry;
+                            }
+                     }
+                 });
+
+                 // Process the selected entry (the one closest to the top of the sidebar that's intersecting the zone)
+                 if (topMostIntersectingEntry) {
+                      const section = topMostIntersectingEntry.target;
+                      const placeId = parseInt(section.dataset.placeId, 10);
+
+                      // Check if this is a new active section detected by scroll
+                      if (placeId !== activePlaceId) {
+                          // console.log('Scroll detected new active section:', placeId);
+
+                           // Find the corresponding feature
+                           const feature = storyFeatures.find(f => f.properties.place_id === placeId);
+
+                           if (feature) {
+                                // Update active states (this also sets activePlaceId)
+                                updateActiveState(placeId, 'scroll'); // Pass 'scroll' source
+
+                                // Disable scroll spy temporarily to prevent feedback loop during map animation
+                                disableScrollSpy();
+                                // Re-enable observer shortly after map move animation ends
+                                // We re-enable when the map movement ends, with a small delay for safety
+                                map.once('moveend', () => {
+                                    setTimeout(enableScrollSpy, 100); // Small delay ensures layout settles
+                                });
+
+                                // Trigger map flyTo
+                                flyToFeature(feature, 'scroll');
+                           }
+                      }
+                 } else {
+                     // If no element is currently intersecting the defined rootMargin area,
+                     // the active state remains on the last section that intersected.
+                     // This is a common pattern for this type of scroll spy.
+                 }
+
+             }, options); // End IntersectionObserver options
+
+             // Start observing each story section element rendered in the sidebar
+             document.querySelectorAll('.story-section').forEach(section => {
+                 observer.observe(section);
+             });
+        }
+
+         // Helper functions to manage observer state (for disabling/enabling)
+         function disableScrollSpy() {
+            if (observer) {
+                 observer.disconnect(); // Stop observing all elements
+                 // console.log("Scroll spy disabled");
+            }
+        }
+
+        function enableScrollSpy() {
+             if (observer) {
+                  // Re-observe all story sections
+                  document.querySelectorAll('.story-section').forEach(section => {
+                     observer.observe(section);
+                  });
+                  // console.log("Scroll spy enabled");
+             }
+        }
+
+
+        // --- Initial Load Sequence ---
+        // Wait for both the map style to load and the GeoJSON data to be fetched successfully before proceeding.
+        Promise.all([
+            new Promise(resolve => {
+                 // Check if the style is already loaded, otherwise wait for the 'load' event
+                 if (map.isStyleLoaded()) {
+                     resolve();
+                 } else {
+                     map.on('load', resolve);
+                 }
+             }),
+            fetch(geoJsonFile)
+             .then(response => {
+                if (!response.ok) {
+                    // Throw an error for non-successful HTTP responses (e.g., 404 Not Found, 500 Server Error)
+                    throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+                }
+                return response.json(); // Parse the JSON data from the response body
+            })
+        ])
+        .then(([_, data]) => {
+             // This block executes after both map is loaded and data is fetched successfully
+
+             // Store and sort features by place_id to ensure correct order in sidebar and story flow
+             storyFeatures = data.features.sort((a, b) => a.properties.place_id - b.properties.place_id);
+
+             if (storyFeatures.length > 0) {
+                 renderStorySections(); // Populate the sidebar with story details
+                 addMarkers(); // Add numbered markers to the map
+                 setupScrollSpy(); // Set up the scroll spy IntersectionObserver
+
+                 // Initial state: Set the first feature as active and fly the map there.
+                 // Use a slight delay before initial actions to ensure layout and observer are fully ready.
+                 setTimeout(() => {
+                      // Set the first section/marker as active initially
+                      updateActiveState(storyFeatures[0].properties.place_id, 'initial');
+                      // Fly to the first feature
+                      flyToFeature(storyFeatures[0], 'initial');
+                 }, 100); // Small delay
+
+
+             } else {
+                  // Handle case where GeoJSON file is valid but contains no features
+                  if (sectionsContainer) {
+                     sectionsContainer.innerHTML = '<p>No story features found in the data file.</p>';
+                  }
+             }
+        })
+        .catch(error => {
+             // Handle errors that occurred during map loading or data fetching (e.g., network error, file not found, invalid JSON)
+             console.error('Error loading map or story data:', error);
+
+             // Display error message in the sidebar area
+             if (sectionsContainer) {
+                sectionsContainer.innerHTML = `<p style="color: #dc3545;">Error loading story data: ${error.message}. Please ensure 'capitol_hill.geojson' exists in the same folder and is a valid GeoJSON file.</p>`;
+             }
+
+              // Optionally, display a more prominent error indicator on the map area
+               const mapElement = document.getElementById('map');
+               if (mapElement) {
+                   const mapErrorDiv = document.createElement('div');
+                   mapErrorDiv.style.cssText = 'position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.9); color:#dc3545; display:flex; justify-content:center; align-items:center; font-size:1.2em; text-align:center; padding:20px; z-index:1000;';
+                   mapErrorDiv.innerText = `Map Error: Could not load data or map style.\nDetails: ${error.message}`;
+                   mapElement.appendChild(mapErrorDiv);
+               }
+        });
+
+        // Handle MapLibre GL JS specific errors that might occur after initial load (e.g., failing to load tiles)
+         map.on('error', (e) => {
+             console.error('MapLibre GL JS Runtime Error:', e.error);
+              // You might want to display a persistent error message on the map if critical runtime errors occur.
+         });
+
+         // Clean up observer and map instance on page unload to free resources
+         window.addEventListener('beforeunload', () => {
+             if (observer) {
+                 observer.disconnect(); // Stop observing
+             }
+             if (map) {
+                 map.remove(); // Destroy the map instance
+             }
+         });
+
+
+    </script>
+</body>
+</html>
+```
