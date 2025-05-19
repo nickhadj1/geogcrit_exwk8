@@ -1,0 +1,176 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3138,
+          47.6291
+        ]
+      },
+      "properties": {
+        "place_id": 1,
+        "name": "Louisa Boren Park",
+        "location_description": "Start/End point at 15th Avenue E and E Garfield Street area",
+        "relative_distance": "start",
+        "sense_of_place_type": "History; Nature; Memory",
+        "sense_explanation": "Honors one of Seattle's earliest citizens, home to historic trees, offers great views",
+        "rhetorical_usage": "hidden little treasure; great views; historic trees; honors one of Seattle's earliest citizens"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3195,
+          47.6345
+        ]
+      },
+      "properties": {
+        "place_id": 4,
+        "name": "Former Leary House",
+        "location_description": "South on 10th Avenue E from E Blaine Street area",
+        "relative_distance": "walk south on 10th from Blaine",
+        "sense_of_place_type": "History; Architecture; Wealth/Elegance",
+        "sense_explanation": "Grand building designed by Alfred Bodley for John and Eliza Leary, made of Tenino sandstone, later used by Red Cross and Episcopal Diocese",
+        "rhetorical_usage": "grand building; lovely sandstone"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3197,
+          47.6296
+        ]
+      },
+      "properties": {
+        "place_id": 8,
+        "name": "Garry oak tree",
+        "location_description": "Corner where Belmont Place E and Belmont Avenue E intersect",
+        "relative_distance": "at the corner where the Belmonts intersect",
+        "sense_of_place_type": "Nature; History",
+        "sense_explanation": "Large and unusual tree, Washington's lone native oak, named by David Douglas",
+        "rhetorical_usage": "large and unusual tree; Washington's lone native oak; rare this far north"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3172,
+          47.6283
+        ]
+      },
+      "properties": {
+        "place_id": 10,
+        "name": "Daughters of the American Revolution house",
+        "location_description": "East side of Harvard Avenue E on E Roy Street",
+        "relative_distance": "on the east side of Harvard Ave E on Roy St",
+        "sense_of_place_type": "History; Heritage; Architecture",
+        "sense_explanation": "Building built in 1925 as a copy of George Washington's home, Mount Vernon",
+        "rhetorical_usage": "copy of George Washington's home"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3172,
+          47.6281
+        ]
+      },
+      "properties": {
+        "place_id": 11,
+        "name": "Former Woman's Century Club / Harvard Exit building",
+        "location_description": "Southeast corner of E Roy Street and Harvard Avenue E",
+        "relative_distance": "on the southeast corner of Roy and Harvard Ave",
+        "sense_of_place_type": "History; Social History; Women's History",
+        "sense_explanation": "Club founded in 1891 for intellectual culture and social problems, built the present building, which later housed the Harvard Exit movie theater",
+        "rhetorical_usage": "former home of the Woman's Century Club; started by 10 women; served a need in the sordid atmosphere of a rapidly developing western city"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3172,
+          47.6284
+        ]
+      },
+      "properties": {
+        "place_id": 12,
+        "name": "Arthur Loveless building",
+        "location_description": "North side of E Roy Street near the Harvard Exit building",
+        "relative_distance": "on your left as you walk east from the Harvard Exit",
+        "sense_of_place_type": "Architecture; Arts",
+        "sense_explanation": "Two-story building built in 1931, described as \"a little bit of England,\" centers on a private courtyard for artists' spaces",
+        "rhetorical_usage": "handsome two-story building; little bit of England; private courtyard"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3185,
+          47.6275
+        ]
+      },
+      "properties": {
+        "place_id": 13,
+        "name": "Frederick Anhalt Apartments",
+        "location_description": "Roy Street area where it curves before the path",
+        "relative_distance": "between two brick apartment buildings as Roy St turns",
+        "sense_of_place_type": "Architecture; History; Urban Development",
+        "sense_explanation": "Apartments developed in the late 1920s with French Norman-inspired elements and house-like features",
+        "rhetorical_usage": "elegant Capitol Hill apartments; French Norman-inspired elements"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.3149,
+          47.6281
+        ]
+      },
+      "properties": {
+        "place_id": 14,
+        "name": "Millionaire's Row / Granite hitching post",
+        "location_description": "14th Avenue E area near E Roy Street",
+        "relative_distance": "turn left on 14th Ave E from E Mercer St (or arrive walking east on Roy St)",
+        "sense_of_place_type": "History; Architecture; Wealth/Elegance; Transportation History",
+        "sense_explanation": "Area known for finest early 20th-century homes, includes a rare granite hitching post as a sign of early Seattle's equestrian history",
+        "rhetorical_usage": "long been known as 'Millionaire's Row'; finest early 20th-century homes; rare sign of early Seattle—a granite hitching post"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.315,
+          47.631
+        ]
+      },
+      "properties": {
+        "place_id": 16,
+        "name": "James A. Moore Mansion",
+        "location_description": "Southwest corner of 14th Avenue E and E Aloha Street",
+        "relative_distance": "continue north on 14th Ave E one block to E Aloha St",
+        "sense_of_place_type": "History; Development; Architecture",
+        "sense_explanation": "Brick mansion built in 1903, was the home of Capitol Hill's developer James A. Moore",
+        "rhetorical_usage": "The brick mansion; home of Capitol Hill's developer"
+      }
+    }
+  ]
+}
